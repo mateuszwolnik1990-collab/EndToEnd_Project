@@ -58,6 +58,9 @@ from app_discovery_system.tools.verification_tools import (
 
 AGENT_NAMES = {
     "ceo": "CEO",
+    "ceo_top3": "CEO",
+    "ceo_final": "CEO",
+    "ceo_review": "CEO",
     "researcher": "Badacz Rynku",
     "competitor": "Analityk Konkurencji",
     "monetization": "Analityk Monetyzacji",
@@ -578,7 +581,13 @@ class CampaignController:
     ) -> None:
         self.vllm_config = vllm_config or VLLMConfig()
         self.db = db or DatabaseManager()
-        self._ctx = multiprocessing.get_context("spawn")
+        # Preferujemy 'fork' na Linuksie: proces potomny nie re-importuje modułu głównego,
+        # co jest krytyczne, gdy rodzicem jest skrypt Streamlit (unika ponownego uruchomienia UI).
+        # Gdy 'fork' jest niedostępny (np. Windows/macOS), używamy domyślnej metody startu.
+        try:
+            self._ctx = multiprocessing.get_context("fork")
+        except ValueError:  # pragma: no cover - platformy bez fork
+            self._ctx = multiprocessing.get_context()
         self._processes: Dict[int, multiprocessing.Process] = {}
 
     # -- Start -------------------------------------------------------------
