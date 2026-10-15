@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+app_discovery_system/database/*.db
+app_discovery_system/database/*.db-wal
+app_discovery_system/database/*.db-shm
+app_discovery_system/workspace_mvp/
+.pytest_cache/
