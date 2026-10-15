@@ -17,8 +17,8 @@ Projekt uwzględnia pięć kluczowych ryzyk technicznych:
 
 from __future__ import annotations
 
-import json
 import multiprocessing
+import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -69,6 +69,10 @@ AGENT_NAMES = {
 }
 
 CAMPAIGN_TIMEOUT = 600.0  # maksymalny czas kampanii w sekundach
+
+
+class CampaignTimeoutError(RuntimeError):
+    """Przekroczono maksymalny czas trwania kampanii."""
 
 
 def _now() -> str:
@@ -231,9 +235,14 @@ def _execute_discovery(campaign_id: int, config: VLLMConfig, use_simulator: bool
         from crewai import Crew, Process
 
         outputs: Dict[str, str] = {}
+        deadline = time.monotonic() + config.campaign_timeout_seconds
         for task, (key, agent) in zip(tasks, labels):
             if db.is_stop_requested(campaign_id):
                 raise CampaignStoppedError("Kampania zatrzymana przez użytkownika.")
+            if time.monotonic() > deadline:
+                raise CampaignTimeoutError(
+                    f"Przekroczono limit czasu kampanii ({config.campaign_timeout_seconds:.0f} s)."
+                )
             label = AGENT_NAMES.get(key, key)
             db.log_agent_event(campaign_id, label, "RUNNING", f"Zadanie: {task.description[:120]}...")
             crew = Crew(
@@ -254,7 +263,7 @@ def _execute_discovery(campaign_id: int, config: VLLMConfig, use_simulator: bool
         db.update_campaign_status(campaign_id, "STOPPED", error_message=str(exc))
         db.log_agent_event(campaign_id, "SYSTEM", "STOPPED", f"Kampania zatrzymana: {exc}")
         return {"status": "STOPPED", "error": str(exc)}
-    except (CallLimitExceededError, VLLMConnectionError) as exc:
+    except (CallLimitExceededError, VLLMConnectionError, CampaignTimeoutError) as exc:
         db.update_campaign_status(campaign_id, "ERROR", error_message=str(exc))
         db.log_agent_event(campaign_id, "SYSTEM", "ERROR", f"Błąd LLM/vLLM: {exc}")
         return {"status": "ERROR", "error": str(exc)}
@@ -411,9 +420,14 @@ def _execute_mvp_build(
         from crewai import Crew, Process
 
         outputs: Dict[str, str] = {}
+        deadline = time.monotonic() + config.campaign_timeout_seconds
         for task, (key, agent) in zip(tasks, labels):
             if db.is_stop_requested(campaign_id):
                 raise CampaignStoppedError("Budowa MVP zatrzymana przez użytkownika.")
+            if time.monotonic() > deadline:
+                raise CampaignTimeoutError(
+                    f"Przekroczono limit czasu budowy MVP ({config.campaign_timeout_seconds:.0f} s)."
+                )
             label = AGENT_NAMES.get(key, key)
             db.log_agent_event(campaign_id, label, "RUNNING", f"Zadanie: {task.description[:120]}...")
             crew = Crew(
@@ -436,7 +450,7 @@ def _execute_mvp_build(
         db.update_campaign_status(campaign_id, "ERROR", error_message=str(exc))
         db.log_agent_event(campaign_id, "SYSTEM", "BLOCKED", str(exc))
         return {"status": "BLOCKED", "error": str(exc)}
-    except (CallLimitExceededError, VLLMConnectionError) as exc:
+    except (CallLimitExceededError, VLLMConnectionError, CampaignTimeoutError) as exc:
         db.update_campaign_status(campaign_id, "ERROR", error_message=str(exc))
         db.log_agent_event(campaign_id, "SYSTEM", "ERROR", f"Błąd LLM/vLLM: {exc}")
         return {"status": "ERROR", "error": str(exc)}
@@ -594,9 +608,19 @@ class CampaignController:
     def start_campaign(self, name: str, use_simulator: bool = False) -> int:
         """Tworzy nową kampanię i uruchamia Fazę 1 w osobnym procesie."""
         campaign_id = self.db.create_campaign(name)
+        effective_simulator = use_simulator
+        if not use_simulator and self.vllm_config.fallback_to_local_simulator:
+            if not self.healthcheck(use_simulator=False):
+                effective_simulator = True
+                self.db.log_agent_event(
+                    campaign_id,
+                    "SYSTEM",
+                    "INFO",
+                    "Serwer vLLM nie odpowiada — przełączono na lokalny symulator (fallback).",
+                )
         proc = self._ctx.Process(
             target=_discovery_process_entry,
-            args=(campaign_id, self.vllm_config, use_simulator),
+            args=(campaign_id, self.vllm_config, effective_simulator),
             daemon=True,
             name=f"campaign-{campaign_id}",
         )

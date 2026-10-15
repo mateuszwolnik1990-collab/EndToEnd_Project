@@ -7,7 +7,6 @@ import pytest
 from app_discovery_system.llm.vllm_client import (
     JSONRepairError,
     extract_json,
-    repair_json,
 )
 from app_discovery_system.models.schemas import (
     ClaimClassification,

@@ -117,7 +117,9 @@ python -m pytest app_discovery_system/tests -q
 | `test_vllm_resilience.py` | limity wywołań, timeouty, retry, circuit breaker, błędy połączenia, flaga STOP |
 | `test_fact_checking.py` | źródło URL vs `[HIPOTEZA]`, walidacja URL, naprawa JSON |
 | `test_campaign_flow.py` | 10 pomysłów, Top 3, ranking malejąco, kompletność raportu, MVP |
-| `test_safety_gates.py` | bramka zatwierdzenia, blokada MVP, brak uruchamiania kodu, path traversal |
+| `test_safety_gates.py` | bramka zatwierdzenia, blokada MVP, timeout kampanii, fallback, brak uruchamiania kodu, path traversal |
+| `test_vllm_http_integration.py` | pełna kampania przez prawdziwy protokół HTTP (OpenAI-compatible) |
+| `test_app_ui.py` | render dashboardu, obecność przycisków Start/Stop/Zatwierdź i zakładek |
 
 ---
 

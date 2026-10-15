@@ -227,6 +227,7 @@ class DatabaseManager:
     def get_latest_campaign(self) -> Optional[Dict[str, Any]]:
         with self._lock, self._connect() as conn:
             row = conn.execute("SELECT * FROM campaigns ORDER BY id DESC LIMIT 1").fetchone()
+            return dict(row) if row else None
 
     def get_ideas_for_campaign(self, campaign_id: int) -> List[Dict[str, Any]]:
         with self._lock, self._connect() as conn:
@@ -280,8 +281,6 @@ class DatabaseManager:
                 d["generated_files"] = json.loads(d.get("generated_files_json") or "{}")
                 result.append(d)
             return result
-
-            return dict(row) if row else None
 
     def list_campaigns(self, limit: int = 50) -> List[Dict[str, Any]]:
         with self._lock, self._connect() as conn:

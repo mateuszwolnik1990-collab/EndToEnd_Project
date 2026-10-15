@@ -24,7 +24,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from app_discovery_system.config import VLLMConfig  # noqa: E402
 from app_discovery_system.database.db_manager import DatabaseManager  # noqa: E402
 from app_discovery_system.orchestrator.campaign_runner import (  # noqa: E402
-    AGENT_NAMES,
     CampaignController,
 )
 
@@ -176,7 +175,7 @@ def _render_ranking(db: DatabaseManager, campaign_id: int) -> None:
                     st.markdown(f"- {claim['claim_text']} **[HIPOTEZA]**")
 
 
-def _render_mvp(db: DatabaseManager, campaign_id: int, ideas: list) -> None:
+def _render_mvp(db: DatabaseManager, campaign_id: int) -> None:
     """Podgląd specyfikacji MVP i wygenerowanego (nieuruchamianego) kodu."""
     st.subheader("🛠️ Specyfikacja MVP i moduł tworzenia aplikacji")
     artifacts = db.get_mvp_artifacts(campaign_id=campaign_id)
@@ -331,7 +330,7 @@ def main() -> None:
         st.subheader("📄 Raport kampanii")
         st.markdown(campaign.get("final_report_md") or "_Raport nie został jeszcze wygenerowany._")
     with tab_mvp:
-        _render_mvp(db, campaign_id, db.get_ideas_for_campaign(campaign_id))
+        _render_mvp(db, campaign_id)
     with tab_history:
         _render_history(db)
 

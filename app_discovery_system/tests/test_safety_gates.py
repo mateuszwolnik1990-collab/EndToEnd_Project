@@ -122,3 +122,59 @@ def test_mvp_specification_model_roundtrip():
         safe_run_instructions="i",
     )
     assert spec.generated_files["README.md"] == "# X"
+
+
+def test_campaign_timeout_marks_error(patched_db, monkeypatch):
+    """Przekroczenie limitu czasu kampanii bezpiecznie kończy ją statusem ERROR."""
+    db = patched_db
+    import app_discovery_system.orchestrator.campaign_runner as runner
+
+    campaign_id = db.create_campaign("Timeout")
+    # Zerowy limit czasu -> natychmiastowy CampaignTimeoutError po pierwszym sprawdzeniu.
+    cfg = VLLMConfig(campaign_timeout_seconds=-1.0)
+    result = runner._execute_discovery(campaign_id, cfg, use_simulator=True)  # noqa: SLF001
+    assert result["status"] == "ERROR"
+    assert "czasu" in result["error"]
+    assert db.get_campaign(campaign_id)["status"] == "ERROR"
+
+
+def test_start_campaign_falls_back_to_simulator_when_vllm_down(temp_db, monkeypatch):
+    """Gdy vLLM nie odpowiada, a fallback jest włączony, kampania startuje w trybie symulatora."""
+    import app_discovery_system.orchestrator.campaign_runner as runner
+
+    monkeypatch.setattr(runner, "DatabaseManager", lambda *a, **k: temp_db)
+    cfg = VLLMConfig(base_url="http://127.0.0.1:1/v1", fallback_to_local_simulator=True)
+    controller = CampaignController(vllm_config=cfg, db=temp_db)
+    assert controller.healthcheck(use_simulator=False) is False
+
+    started: dict = {}
+
+    class FakeProc:
+        pid = 4242
+
+        def start(self) -> None:
+            started["started"] = True
+
+        def is_alive(self) -> bool:
+            return False
+
+    monkeypatch.setattr(controller._ctx, "Process", lambda **kwargs: FakeProc())  # noqa: SLF001
+    campaign_id = controller.start_campaign("Fallback", use_simulator=False)
+
+    assert started.get("started") is True
+    logs = temp_db.get_agent_logs(campaign_id)
+    assert any("symulator" in entry["message"].lower() for entry in logs)
+
+
+def test_build_mvp_blocked_without_approval_via_orchestrator(patched_db):
+    """Bramka bezpieczeństwa działa także na poziomie _execute_mvp_build (obrona w głąb)."""
+    db = patched_db
+    import app_discovery_system.orchestrator.campaign_runner as runner
+
+    campaign_id = db.create_campaign("Deep gate")
+    runner._execute_discovery(campaign_id, VLLMConfig(), use_simulator=True)  # noqa: SLF001
+    top = [i for i in db.get_ideas_for_campaign(campaign_id) if i["is_top3"]][0]
+
+    result = runner._execute_mvp_build(campaign_id, top["id"], VLLMConfig(), use_simulator=True)  # noqa: SLF001
+    assert result["status"] == "BLOCKED"
+

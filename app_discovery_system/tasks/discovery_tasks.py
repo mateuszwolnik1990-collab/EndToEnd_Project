@@ -6,7 +6,7 @@ monetyzacji i trudności budowy -> raport końcowy CEO z oceną 0-100.
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import List
 
 from crewai import Agent, Task
 
