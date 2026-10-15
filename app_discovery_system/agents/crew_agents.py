@@ -27,6 +27,10 @@ SOURCE_DISCIPLINE = (
 )
 
 NO_SIDE_EFFECTS = (
+    "ZAKAZY BEZPIECZEŃSTWA: Nie publikuj treści, nie wysyłaj wiadomości, nie dokonuj zakupów, "
+    "nie uruchamiaj żadnego kodu ani nie łącz się z płatnymi usługami zewnętrznymi. "
+    "Działasz wyłącznie lokalnie i tylko na potrzeby analizy."
+)
 
 
 class AgentFactory:
@@ -167,8 +171,3 @@ class AgentFactory:
             self.developer(),
             self.tester(),
         ]
-
-    "ZAKAZY BEZPIECZEŃSTWA: Nie publikuj treści, nie wysyłaj wiadomości, nie dokonuj zakupów, "
-    "nie uruchamiaj żadnego kodu ani nie łącz się z płatnymi usługami zewnętrznymi. "
-    "Działasz wyłącznie lokalnie i tylko na potrzeby analizy."
-)

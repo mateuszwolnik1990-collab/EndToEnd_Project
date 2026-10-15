@@ -87,6 +87,14 @@ _SIMULATED_IDEAS = [
         "scores": [19, 18, 12, 11, 12],
     },
     {
+        "title": "VendorTrust",
+        "category": "B2B",
+        "problem_statement": "Działy zakupów nie potrafią szybko zweryfikować wiarygodności nowych dostawców.",
+        "target_audience": "Działy zakupów i compliance w MŚP",
+        "value_proposition": "Automatyczny scoring wiarygodności dostawców na bazie danych publicznych.",
+        "scores": [20, 19, 14, 9, 14],
+    },
+]
 
 _SIMULATED_COMPETITORS = (
     "Na rynku obecni są zarówno gracze globalni (np. rozwiązania ERP), jak i niszowe startupy. "
@@ -162,6 +170,9 @@ class LocalSimulatorClient:
             return self._analysis_json()
         if "[TASK:MVP]" in joined:
             return self._mvp_json()
+        if "[TASK:QA]" in joined:
+            return self._qa_json()
+        return "Thought: Brak danych.\nFinal Answer: Analiza niedostępna w symulatorze."
 
     # -- Generatory odpowiedzi --------------------------------------------
     def _ideas_json(self) -> str:
@@ -280,16 +291,3 @@ class LocalSimulatorClient:
             ),
         }
         return "Final Answer: " + json.dumps(payload, ensure_ascii=False)
-
-        if "[TASK:QA]" in joined:
-            return self._qa_json()
-        return "Thought: Brak danych.\nFinal Answer: Analiza niedostępna w symulatorze."
-
-        "title": "VendorTrust",
-        "category": "B2B",
-        "problem_statement": "Działy zakupów nie potrafią szybko zweryfikować wiarygodności nowych dostawców.",
-        "target_audience": "Działy zakupów i compliance w MŚP",
-        "value_proposition": "Automatyczny scoring wiarygodności dostawców na bazie danych publicznych.",
-        "scores": [20, 19, 14, 9, 14],
-    },
-]
